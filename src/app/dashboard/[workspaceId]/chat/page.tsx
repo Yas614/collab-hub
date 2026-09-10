@@ -17,7 +17,7 @@ export default async function ChatPage({ params }: ChatPageProps) {
   // Database tracking query remains completely untouched
   const { data: messages } = await supabase
     .from("messages")
-    .select("id, content, created_at, user_id, profiles(display_name, avatar_url)")
+    .select("id, content, created_at, user_id, file_url, attachment_type, profiles(display_name, avatar_url)")
     .eq("workspace_id", workspaceId)
     .order("created_at", { ascending: true })
     .limit(100);

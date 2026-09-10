@@ -3,18 +3,20 @@
 import React, { useState } from "react";
 import { Plus, X, Loader2 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
-import type { Member } from "@/types/kanban";
+import type { Member, Task } from "@/types/kanban";
 
 export default function AddTaskInline({
   workspaceId,
   columnId,
   nextPosition,
   members = [],
+  onTaskCreated,
 }: {
   workspaceId: string;
   columnId: string;
   nextPosition: number;
   members?: Member[];
+  onTaskCreated?: (task: Task) => void;
 }) {
   const [isEditing, setIsEditing]     = useState(false);
   const [title, setTitle]             = useState("");
@@ -31,19 +33,24 @@ export default function AddTaskInline({
     if (!title.trim()) return;
     setIsSubmitting(true);
     setError("");
-    const { error: insertError } = await supabase.from("tasks").insert({
-      workspace_id: workspaceId,
-      column_id: columnId,
-      title: title.trim(),
-      priority,
-      due_date: dueDate || null,
-      assigned_to: assignedTo || null,
-      position: nextPosition,
-    });
+    const { data: inserted, error: insertError } = await supabase
+      .from("tasks")
+      .insert({
+        workspace_id: workspaceId,
+        column_id: columnId,
+        title: title.trim(),
+        priority,
+        due_date: dueDate || null,
+        assigned_to: assignedTo || null,
+        position: nextPosition,
+      })
+      .select("*, assignee:profiles(id, display_name, avatar_url)")
+      .single();
     setIsSubmitting(false);
     if (insertError) {
       setError(insertError.message);
     } else {
+      if (inserted) onTaskCreated?.(inserted as unknown as Task);
       reset();
     }
   };

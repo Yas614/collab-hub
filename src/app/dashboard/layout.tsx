@@ -3,14 +3,17 @@ import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import {
-  LayoutDashboard, Kanban, Settings, Bell, LogOut, Menu, X, AlertCircle,
+  LayoutDashboard, Kanban, Settings, LogOut, Menu, X,
+  Calendar,
 } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import WorkspaceSearch from "@/components/shared/WorkspaceSearch";
+import NotificationBell from "@/components/shared/NotificationBell";
 const sidebarItems = [
   { name: "Overview",          icon: LayoutDashboard, href: "/dashboard" },
   { name: "Workspaces",        icon: Kanban,           href: "/dashboard/workspaces" },
   { name: "Account Settings",  icon: Settings,         href: "/dashboard/settings" },
+  { name: "Calendar",          icon: Calendar,         href: "/dashboard/calendar" },
 ];
 interface UserProfile {
   display_name: string;
@@ -20,15 +23,14 @@ interface UserProfile {
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [isSidebarOpen, setIsSidebarOpen]     = useState(true);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [isNotificationOpen, setIsNotificationOpen] = useState(false);
   const pathname = usePathname();
   const [profile, setProfile]         = useState<UserProfile | null>(null);
-  const [pendingCount, setPendingCount] = useState(0);
   const isInsideWorkspace =
     /^\/dashboard\/[^/]+/.test(pathname) &&
     !pathname.endsWith("/dashboard") &&
     !pathname.startsWith("/dashboard/workspaces") &&
-    !pathname.startsWith("/dashboard/settings");
+    !pathname.startsWith("/dashboard/settings")&&
+    !pathname.startsWith("/dashboard/calendar");
   useEffect(() => {
     const init = async () => {
       const { data: { user } } = await supabase.auth.getUser();
@@ -43,23 +45,6 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
         avatar_url: "",
         email: user.email ?? "",
       });
-      // Only count tasks assigned to THIS user that aren't in a "Done" column
-      const { data: memberRows } = await supabase
-        .from("workspace_members")
-        .select("workspace_id")
-        .eq("user_id", user.id);
-      const workspaceIds = (memberRows ?? []).map((r) => r.workspace_id);
-      if (workspaceIds.length === 0) return;
-      const { data: taskData } = await supabase
-        .from("tasks")
-        .select("id, column:columns(title)")
-        .eq("assigned_to", user.id)
-        .in("workspace_id", workspaceIds);
-      const pending = (taskData ?? []).filter((t) => {
-        const title = (t.column as any)?.title?.toLowerCase() ?? "";
-        return title !== "done" && title !== "completed";
-      }).length;
-      setPendingCount(pending);
     };
     init();
   }, []);
@@ -135,28 +120,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
               <WorkspaceSearch />
             </div>
             <div className="flex items-center gap-4 relative">
-              <button onClick={() => setIsNotificationOpen(!isNotificationOpen)} className="p-2 text-slate-500 hover:bg-slate-100 rounded-full relative">
-                <Bell size={20} />
-                {pendingCount > 0 && <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full border-2 border-white" />}
-              </button>
-              {isNotificationOpen && (
-                <div className="absolute right-12 top-12 w-80 bg-white border border-slate-100 rounded-2xl shadow-xl z-50 p-4 space-y-3">
-                  <div className="flex justify-between items-center border-b border-slate-50 pb-2">
-                    <h4 className="font-bold text-sm text-slate-800">My Assigned Tasks</h4>
-                    <button onClick={() => setIsNotificationOpen(false)} className="text-xs text-indigo-600 font-semibold hover:underline">Close</button>
-                  </div>
-                  <div className="space-y-3 max-h-60 overflow-y-auto">
-                    {pendingCount > 0 ? (
-                      <div className="flex gap-3 items-start p-2 hover:bg-slate-50 rounded-xl">
-                        <AlertCircle className="text-amber-500 shrink-0 mt-0.5" size={16} />
-                        <p className="text-xs text-slate-600">You have <span className="font-bold text-slate-900">{pendingCount} open task{pendingCount !== 1 ? "s" : ""}</span> assigned to you.</p>
-                      </div>
-                    ) : (
-                      <p className="text-xs text-slate-400 text-center py-4">All caught up! No open assigned tasks.</p>
-                    )}
-                  </div>
-                </div>
-              )}
+              <NotificationBell />
               <div className="h-8 w-8 rounded-full bg-indigo-600 flex items-center justify-center text-white font-bold text-xs overflow-hidden border border-slate-100">
                 {profile?.avatar_url
                   ? <img src={profile.avatar_url} alt="Avatar" className="w-full h-full object-cover" />

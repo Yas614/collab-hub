@@ -42,41 +42,40 @@ export default function NewWorkspaceModal({ isOpen, onClose, userId }: NewWorksp
       if (!finalUserId) throw new Error("Session expired.");
 
       // 1. Create the unique slug
-      const slug = `${name.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/[\s_]+/g, "-")}-${Math.floor(1000 + Math.random() * 9000)}`;
+ // 1. Create the unique slug
+const slug = `${name.toLowerCase().trim().replace(/[^\w\s-]/g, "").replace(/[\s_]+/g, "-")}-${Math.floor(1000 + Math.random() * 9000)}`;
 
-      // 2. Insert the workspace and get its generated id back
-      const { data: newWorkspace, error: insertError } = await supabase
-        .from("workspaces")
-        .insert({
-          name: name.trim(),
-          slug: slug,
-          created_by: finalUserId,
-        })
-        .select("id")
-        .single();
+// 2. Generate the id ourselves so we don't need .select() after insert
+//    (RETURNING would require the SELECT policy to pass, which it can't
+//    yet — the workspace_members "owner" row doesn't exist until step 2b)
+const newWorkspaceId = crypto.randomUUID();
 
-      if (insertError) throw insertError;
+const { error: insertError } = await supabase
+  .from("workspaces")
+  .insert({
+    id: newWorkspaceId,
+    name: name.trim(),
+    slug: slug,
+    created_by: finalUserId,
+  });
 
-      // 2b. Register the creator as the workspace owner in workspace_members.
-      // Team/board/chat access is now driven by this table, not just created_by.
-      const { error: memberError } = await supabase
-        .from("workspace_members")
-        .insert({
-          workspace_id: newWorkspace.id,
-          user_id: finalUserId,
-          role: "owner",
-        });
+if (insertError) throw insertError;
 
-      if (memberError) throw memberError;
+// 2b. Now that the workspace exists, register the creator as owner
+const { error: memberError } = await supabase
+  .from("workspace_members")
+  .insert({
+    workspace_id: newWorkspaceId,
+    user_id: finalUserId,
+    role: "owner",
+  });
 
-      // 3. SUCCESS LOGIC: 
-      // Clear the form
-      setName("");
-      // Close the modal
-      onClose();
-      // REDIRECT to the new workspace's board — routes are keyed by id, not slug
-      router.push(`/dashboard/${newWorkspace.id}/board`);
-      
+if (memberError) throw memberError;
+
+setName("");
+onClose();
+router.push(`/dashboard/${newWorkspaceId}/board`);
+
     } catch (err: any) {
       setError(err.message || "Failed to create workspace.");
     } finally {

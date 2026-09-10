@@ -2,7 +2,6 @@
 
 import React, { useState } from "react";
 import { UserPlus, Loader2 } from "lucide-react";
-import { supabase } from "@/lib/supabase/client";
 import { useRouter } from "next/navigation";
 
 export default function InviteMemberForm({ workspaceId }: { workspaceId: string }) {
@@ -18,41 +17,23 @@ export default function InviteMemberForm({ workspaceId }: { workspaceId: string 
     setMessage(null);
 
     try {
-      // Look up an existing profile by email. Invites only work for people
-      // who already have an account — there's no email-sending step here.
-      const { data: profile, error: profileError } = await supabase
-        .from("profiles")
-        .select("id")
-        .eq("email", email.trim().toLowerCase())
-        .maybeSingle();
-
-      if (profileError) throw profileError;
-
-      if (!profile) {
-        setMessage({
-          text: "No account found with that email. They'll need to sign up first.",
-          type: "error",
-        });
-        return;
-      }
-
-      const { error: insertError } = await supabase.from("workspace_members").insert({
-        workspace_id: workspaceId,
-        user_id: profile.id,
-        role: "member",
+      const res = await fetch("/api/invite", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim(), workspaceId }),
       });
+      const result = await res.json();
 
-      if (insertError) {
-        if (insertError.code === "23505") {
-          setMessage({ text: "That person is already a member.", type: "error" });
-        } else {
-          throw insertError;
-        }
+      if (!res.ok) {
+        setMessage({ text: result.error || "Failed to invite.", type: "error" });
         return;
       }
 
       setEmail("");
-      setMessage({ text: "Member added!", type: "success" });
+      setMessage({
+        text: result.status === "invited" ? "Invite email sent!" : "Member added!",
+        type: "success",
+      });
       router.refresh();
     } catch (err: any) {
       setMessage({ text: err.message || "Failed to add member.", type: "error" });

@@ -90,8 +90,7 @@ export default function BoardClient({
     await supabase.from("tasks").update({ column_id: targetColumnId, position: newPosition }).eq("id", taskId);
   };
 
-  // Explicitly matching custom Task parameters to cleanly satisfy the child component properties
-  const handleTaskUpdate = useCallback((updated: any) => {
+  const handleTaskUpdate = useCallback((updated: Partial<Task> & { id: string }) => {
     setLocalTasks((prev) => prev.map((t) => t.id === updated.id ? { ...t, ...updated } : t));
   }, []);
 
@@ -165,9 +164,8 @@ export default function BoardClient({
                       <div className="flex items-center justify-between pt-2 border-t border-slate-50 text-[11px] text-slate-400">
                         <div className="flex items-center gap-1">
                           <User size={12} />
-                          {/* Changed from task.assignee to task.assigned_to to match your standard object structure */}
                           <span className="truncate max-w-[100px]">
-                            {(task as any).assigned_to?.display_name ?? (task as any).assignee?.display_name ?? "Unassigned"}
+                            {task.assignee?.display_name ?? "Unassigned"}
                           </span>
                         </div>
                         <div className="flex items-center gap-2">
@@ -193,7 +191,15 @@ export default function BoardClient({
                 )}
               </div>
 
-              <AddTaskInline workspaceId={workspaceId} columnId={column.id} nextPosition={columnTasks.length + 1} members={members} />
+              <AddTaskInline
+                workspaceId={workspaceId}
+                columnId={column.id}
+                nextPosition={columnTasks.length + 1}
+                members={members}
+                onTaskCreated={(task) => {
+                  setLocalTasks((prev) => prev.some((t) => t.id === task.id) ? prev : [...prev, task]);
+                }}
+              />
             </div>
           );
         })}
@@ -202,7 +208,7 @@ export default function BoardClient({
       {/* Task detail slide-over */}
       {selectedTask && (
         <TaskDetailSlideOver
-          task={selectedTask as any}
+          task={selectedTask}
           workspaceId={workspaceId}
           members={members} 
           onClose={() => setSelectedTaskId(null)}

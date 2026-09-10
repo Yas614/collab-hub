@@ -1,36 +1,57 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# CollabHub
+
+CollabHub is a modern, real-time workspace and project management application built with Next.js, Supabase, and Tailwind CSS. It brings together task tracking, team communication, and scheduling into a single platform.
+
+## Features
+
+- **Interactive Kanban Boards**: Drag-and-drop task management with priority levels, status columns, and inline task creation.
+- **Schedule & Calendar View**: Dynamic week and month views to track task due dates and workspace deadlines.
+- **Real-Time Workspace Chat**: Integrated chat rooms for instant team communication within specific workspaces.
+- **Notification System**: Built-in notification bell and activity updates for user actions and task deadlines.
+- **Authentication & Security**: Email/password sign-up, password reset flows, protected dashboard routes, and Supabase Row Level Security (RLS).
+- **Workspace Management**: Multi-workspace switching, member invitations, and team administration.
+
+## Tech Stack
+
+- **Framework**: [Next.js](https://nextjs.org/) (App Router, Server Components, Turbopack)
+- **Database & Auth**: [Supabase](https://supabase.com/) (PostgreSQL, Realtime, Auth)
+- **Styling**: [Tailwind CSS](https://tailwindcss.com/)
+- **Icons**: [Lucide React](https://lucide.dev/)
 
 ## Getting Started
 
-First, run the development server:
+### Prerequisites
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+- Node.js 18.x or higher
+- npm or yarn
+- A Supabase project
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+### Environment Variables
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+Create a `.env.local` file in the root directory and add your Supabase credentials:
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+\`\`\`env
+NEXT_PUBLIC_SUPABASE_URL=your_supabase_project_url
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
+SUPABASE_SERVICE_ROLE_KEY=your_supabase_service_role_key
+\`\`\`
 
-## Learn More
+### Installation
 
-To learn more about Next.js, take a look at the following resources:
+1. Clone the repository:
+   \`\`\`bash
+   git clone https://github.com/your-username/collab-hub.git
+   cd collab-hub
+   \`\`\`
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+2. Install dependencies:
+   \`\`\`bash
+   npm install
+   \`\`\`
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+3. Run the development server:
+   \`\`\`bash
+   npm run dev
+   \`\`\`
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+4. Open [http://localhost:3000](http://localhost:3000) in your browser.

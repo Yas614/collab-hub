@@ -5,6 +5,7 @@ import { Plus } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
 import NewWorkspaceModal from "./NewWorkspaceModal";
 
+
 interface Props {
   userName: string | undefined;
   userId: string;
@@ -30,7 +31,7 @@ export default function DashboardHeaderActions({ userName, userId: initialUserId
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-900">
-            {userName ? `Welcome back, ${userName}! 👋` : "Welcome back! 👋"}
+            {userName ? `Welcome back, ${userName}! ` : "Welcome back! "}
           </h1>
           <p className="text-slate-500 text-sm">Here's what's happening across your workspaces today.</p>
         </div>

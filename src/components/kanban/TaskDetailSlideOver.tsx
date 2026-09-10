@@ -3,20 +3,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import { X, Trash2, User, Calendar, Flag, Save, Loader2, Send } from "lucide-react";
 import { supabase } from "@/lib/supabase/client";
-import type { Task, Member, Profile, TaskComment } from "@/types/kanban";
-
-function formatCommentTime(dateString: string) {
-  try {
-    return new Intl.DateTimeFormat("en-US", {
-      month: "short",
-      day: "numeric",
-      hour: "numeric",
-      minute: "2-digit",
-    }).format(new Date(dateString));
-  } catch {
-    return "";
-  }
-}
+import { format } from "date-fns";
+import type { Task, Member, TaskComment as Comment } from "@/types/kanban";
 
 const PRIORITY_OPTIONS = [
   { value: "urgent", label: "🔴 Urgent" },
@@ -51,13 +39,15 @@ export default function TaskDetailSlideOver({
   const [description, setDescription] = useState(task.description ?? "");
   const [priority,    setPriority]    = useState(task.priority);
   const [dueDate,     setDueDate]     = useState(task.due_date ?? "");
-  const [assignedTo,  setAssignedTo]  = useState<string>(task.assigned_to ?? "");
+  // task.assigned_to is the raw user_id (uuid); it IS the value the <select> needs,
+  // no lookup against members required.
+  const [assignedTo, setAssignedTo] = useState<string>(task.assigned_to ?? "");
 
   const [isSaving,    setIsSaving]    = useState(false);
   const [isDeleting,  setIsDeleting]  = useState(false);
   const [isDirty,     setIsDirty]     = useState(false);
 
-  const [comments,        setComments]        = useState<TaskComment[]>([]);
+  const [comments,        setComments]        = useState<Comment[]>([]);
   const [commentDraft,    setCommentDraft]    = useState("");
   const [isSendingComment, setIsSendingComment] = useState(false);
   const commentsBottomRef = useRef<HTMLDivElement>(null);
@@ -70,7 +60,7 @@ export default function TaskDetailSlideOver({
         .select("id, content, created_at, user_id, profiles(display_name, avatar_url)")
         .eq("task_id", task.id)
         .order("created_at", { ascending: true });
-      setComments((data as unknown as TaskComment[]) ?? []);
+      setComments((data as unknown as Comment[]) ?? []);
     };
     load();
 
@@ -81,9 +71,9 @@ export default function TaskDetailSlideOver({
         const { data: withProfile } = await supabase
           .from("task_comments")
           .select("id, content, created_at, user_id, profiles(display_name, avatar_url)")
-          .eq("id", (payload.new as TaskComment).id)
+          .eq("id", (payload.new as Comment).id)
           .single();
-        if (withProfile) setComments((prev) => prev.some((c) => c.id === withProfile.id) ? prev : [...prev, withProfile as unknown as TaskComment]);
+        if (withProfile) setComments((prev) => prev.some((c) => c.id === withProfile.id) ? prev : [...prev, withProfile as unknown as Comment]);
       })
       .subscribe();
 
@@ -112,17 +102,18 @@ export default function TaskDetailSlideOver({
     setIsSaving(false);
     
     if (!error) {
-      // 2. Find matching profile object to satisfy client-side Task shape cleanly
+      // Keep assigned_to as the raw uuid (matches the shared Task shape / DB column);
+      // assignee carries the joined profile for display purposes only.
       const matchedProfile = members.find((m) => m.user_id === assignedTo)?.profiles ?? null;
-      
+
       onUpdate({
         id: task.id,
         title: dbPayload.title,
         description: dbPayload.description,
         priority: dbPayload.priority,
         due_date: dbPayload.due_date,
-        assigned_to: dbPayload.assigned_to, // raw user_id, kept separate
-        assignee: matchedProfile,           // joined profile, for display
+        assigned_to: dbPayload.assigned_to,
+        assignee: matchedProfile,
       });
       setIsDirty(false);
     }
@@ -142,12 +133,8 @@ export default function TaskDetailSlideOver({
     setIsSendingComment(true);
     setCommentDraft("");
     const { data: { user } } = await supabase.auth.getUser();
-    const { error } = await supabase.from("task_comments").insert({ task_id: task.id, user_id: user?.id, content });
+    await supabase.from("task_comments").insert({ task_id: task.id, user_id: user?.id, content });
     setIsSendingComment(false);
-    if (error) {
-      console.error("Failed to post comment:", error);
-      setCommentDraft(content); // restore draft so nothing is lost
-    }
   };
 
   return (
@@ -244,7 +231,7 @@ export default function TaskDetailSlideOver({
                       <div className="flex items-baseline gap-2 mb-1">
                         <span className="text-xs font-semibold text-slate-800">{c.profiles?.display_name ?? "Unknown"}</span>
                         <span className="text-[10px] text-slate-400">
-                          {c.created_at ? formatCommentTime(c.created_at) : ""}
+                          {c.created_at ? format(new Date(c.created_at), "MMM d, h:mm a") : ""}
                         </span>
                       </div>
                       <p className="text-sm text-slate-700 bg-slate-50 px-3 py-2 rounded-xl">{c.content}</p>
